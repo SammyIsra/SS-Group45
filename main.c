@@ -12,7 +12,7 @@ int main()
 {
     /*local variables*/
     FILE *ipf, *opf;
-    char c;
+    char c, next;
     int com_flag = 0;
 
     ipf = fopen("input.txt", "r");
@@ -41,28 +41,35 @@ int main()
             /*If the next character is a star, then replace it
             with a space in the output file. Otherwise,
             print the character*/
-            c = fgetc(ipf);
-            if(c == '*')
+            next = fgetc(ipf);
+            if(next == '*')
             {
                 fputc(' ',opf);
                 com_flag = 1;
             }
             else
+            {
                 fputc(c,opf);
+                fputc(next, opf);
+            }
         }
 
         /*Check if at the end of a comment*/
         else if(c == '*')
         {
-            c = fgetc(ipf);
-            if(c == '/')
+            next = fgetc(ipf);
+            if(next == '/')
             {
                 fputc(' ', opf);
                 com_flag = 0;
             }
 
             else
-                fputc(c,opf);
+            {
+               fputc(c,opf);
+               fputc(next, opf);
+            }
+                
         }
 
         /*Print the character if not within a comment*/
