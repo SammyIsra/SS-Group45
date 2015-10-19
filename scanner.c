@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 //Function prototypes
 void cleanCode(char* inputFile, char* outputFile);
@@ -17,7 +18,7 @@ int tokenTranslate(char* temp);
 void lexemTable(char* inputFile, char* outputFile);
 char* appendC(char *temp, int tempsize, char c);
 int tokenTranslate(char* temp);
-int isspecial(char c);
+int is_Special(char c);
 void lexemeList(char *inputFile, char* outputFile);
 void tokensList(char* inputFile, char* outputFile);
 
@@ -215,7 +216,7 @@ void lexemTable(char* inputFile, char* outputFile){
 
             //End of case if it starts with a number                
 
-        }else if(isspecial(c)){ //Had to make a special function for this because of out specific alphabet
+        }else if(is_Special(c)){ //Had to make a special function for this because of out specific alphabet
 
             //The first couple of cases check if we have any of the double symbols
             // Theres probably an easy way to do this, but I can't think of it right now
@@ -292,7 +293,7 @@ void lexemTable(char* inputFile, char* outputFile){
             doubleSymbol = 0;
             temp[0] = '\0';
         
-        }else if(isprint(c) && !isspace(c) && !isspecial(c)){
+        }else if(isprint(c) && !isspace(c) && !is_Special(c)){
             //This is the "you seriously screwed up" part
             //This section of code will only be reached if we have a character that
             //  *Is a printable character, AND
@@ -404,7 +405,7 @@ int tokenTranslate(char* temp){
         Returns 1 if we the character is an allowed special character
         0 if it's not
 */
-int isspecial(char c){
+int is_Special(char c){
 
     if( c == '+' || c == '-' || c == '*' || 
         c == '/' || c == '(' || c == ')' || 
@@ -438,7 +439,7 @@ void tokensList(char* inputFile, char* outputFile){
     fscanf(input, "%s", trash); //Header 2
     fscanf(input, "%s", trash); //Random '0'?
 
-    while(some = fscanf(input, "%s", hold) > 0){
+    while((some = fscanf(input, "%s", hold)) > 0){
 
         //Get the token number
         fscanf(input, "%d", &code);
