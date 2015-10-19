@@ -19,6 +19,7 @@ char* appendC(char *temp, int tempsize, char c);
 int tokenTranslate(char* temp);
 int isspecial(char c);
 void lexemeList(char *inputFile, char* outputFile);
+void tokensList(char* inputFile, char* outputFile);
 
 //Token Table
 typedef enum {
@@ -41,6 +42,8 @@ int main(){
 
     //Second step is to make the lexem table from the clean input
     lexemTable("cleaninput.txt", "lexemetable.txt");
+
+    tokensList("lexemetable.txt", "tokenlist.txt");
 
     return 0;
 }
@@ -418,17 +421,36 @@ int isspecial(char c){
         Takes in the lexemtable from last section
         Prints out the lexem list from that
 */
-void tokensList(char* inputList, char* outputFile){
+void tokensList(char* inputFile, char* outputFile){
 
     FILE *input = fopen(inputFile, "r"); 
-    FILE *output = fopen(outFile, "w");
+    FILE *output = fopen(outputFile, "w");
+
+    char trash[128] = "";
+    int code, some;
+    char hold[TOKEN_MAX_LEN] = "";
 
     if(input == NULL)
         error("Could not open the Lexem Table file");
 
-    
+    //Remove the headers from the stream
+    fscanf(input, "%s", trash); //Header 1
+    fscanf(input, "%s", trash); //Header 2
+    fscanf(input, "%s", trash); //Random '0'?
 
+    while(some = fscanf(input, "%s", hold) > 0){
 
+        //Get the token number
+        fscanf(input, "%d", &code);
+  
+        //Print said token      
+        fprintf(output, "%d ", code);
+
+        if(code == 2 || code == 3)
+            fprintf(output, "%s ", hold);
+    }
+
+    //Close the files
     fclose(input);
     fclose(output);
 }
