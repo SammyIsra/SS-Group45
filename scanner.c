@@ -18,7 +18,7 @@ void lexemTable(char* inputFile, char* outputFile);
 char* appendC(char *temp, int tempsize, char c);
 int tokenTranslate(char* temp);
 int isspecial(char c);
-
+void lexemeList(char *inputFile, char* outputFile);
 
 //Token Table
 typedef enum {
@@ -411,4 +411,24 @@ int isspecial(char c){
         return 1;
 
     return 0;
+}
+
+/*
+    Tokens List
+        Takes in the lexemtable from last section
+        Prints out the lexem list from that
+*/
+void tokensList(char* inputList, char* outputFile){
+
+    FILE *input = fopen(inputFile, "r"); 
+    FILE *output = fopen(outFile, "w");
+
+    if(input == NULL)
+        error("Could not open the Lexem Table file");
+
+    
+
+
+    fclose(input);
+    fclose(output);
 }
