@@ -1,4 +1,6 @@
 /*
+	Meenakshi Karthikeya
+	Victoria Rivas
 	Sammy Israwi
 	09/20/2015
 	Assignment 1
