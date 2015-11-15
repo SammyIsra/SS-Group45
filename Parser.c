@@ -521,115 +521,140 @@ void statement(){
         
         getNextToken();
         
-    } else if (nextToken == ifsym){     // IF
-        
-        int firstJump;
-        int secondJump;
-        int currentLine;
-        int lastLine;
-        
-        getNextToken();
-        
-        condition();
-        
-        if(nextToken != thensym){
-            error(16);
-        }
-        
-        //Record the code index, make a dummy line
-        firstJump = codeIndex;
-        print(0, 0, 0);
-        
-        getNextToken();
-        statement();
-        
-        if(nextToken == elsesym){
-            
-            getNextToken();
-            
-            //Get location of dummy line 
-            // (Location of the second jump)
-            //second_Jump will land at the line at end of execution
-            secondJump = codeIndex;
-            //Dummy line
-            print(0, 0, 0);
-            
-            //Record the current line
-            currentLine = codeIndex;
-            
-            codeIndex = firstJump;
+    }  else if(nextToken == ifsym)
+    {
+        if(DEBUG)
+            printf("STATEMENT: ifsym\n");
 
-            print(8, 0, currentLine);
+        /*
+                Steps
+            Check for condition
+            If contition is true, do not jump
+            Else, jump to "else" (Keep track of it's location, use dummy instruction)
+            Go through statement inside body of "if"
+            jumo to end of else (Keep track if location to jump to and from, use dummy variable)
+            check for else
+            *First jump arrives here*
+            Go through statement inside "else"
+            *second jumo arrives here*
+            end of "if-else"
         
-            statement();
-            
-            currentLine = codeIndex;
-            
-            codeIndex = secondJump;
-            
-            print(7, 0, currentLine);
-            
-            codeIndex = currentLine;
+        */
         
+        getNextToken();
+
+        condition();
+
+        if(nextToken != thensym)
+            error(16);
+
+
+        //Get location of dummy line (Where first jump will be)
+        // first_jump will jump to the line before the statement in else
+        int first_jump = codeIndex;
+        
+        //Dummy line
+        print(0, 0, 557);
+
+        getNextToken();
+        
+        //Inside the if
+        statement();
+  
+        //If we have an else
+        if(nextToken == elsesym) 
+        {
+        	getNextToken();
+        	
+        	//Get location of dummy line (Where second jump will be)
+            // second_jump will jump to the line at the end of execution
+            int second_jump = codeIndex;
             
-        } else {
+            //Dummy line
+            print(0, 0, 574);
+        	
+        	//Make fist_jump land in current codeIndex 
+        	int curLine = codeIndex;
+        	
+        	codeIndex = first_jump;
+        	
+        	print(8, 0, curLine);
+        	
+        	codeIndex = curLine;
+        	//End of making first_jump...
+        	
+        	//Statement inside "else"
+        	statement();
             
-            //Record where the last line is
-            lastLine = codeIndex;
+            //Make second_jump land in current codeIndex
+            curLine = codeIndex;
             
-            //Make the code inex the place where the first jump departs from
-            codeIndex = firstJump;
+            codeIndex = second_jump;
+        	
+        	print(7, 0, curLine);
+        	
+        	codeIndex = curLine;
+        	//End of second_jump...
+        	
+        }
+        else
+        {
+            //record current line
+            int lastLine = codeIndex;
             
-            //Rewrite the dummy line from the IF statement
+            //Get to dummy line
+            codeIndex = first_jump;
+            
+            //Overwrite dummy line
             print(8, 0, lastLine);
             
-            //codeIndex is now back at the rightful place
+            //Get back to actual line
             codeIndex = lastLine;
         }
+
         
-    } else if (nextToken == whilesym){  // WHILE
-        
-        if (nextToken != dosym)
-        	error(18);
-        
-        int firstLine1;
-        int firstLine2;
-        int lastLine;
-        
+    }
+    else if(nextToken == whilesym)
+    {
+        if(DEBUG)
+            printf("STATEMENT: whilesym\n");
+
         getNextToken();
+
+        // ****** Put first line here 
+        int realFirstLine = codeIndex;
         
-        firstLine1 = codeIndex;
         condition();
-        firstLine2 = codeIndex;
         
-        // Print the dummy line
-        print(0, 0, 0);
+        int firstLine = codeIndex;
+
+        //Dummy line
+        print(0, 0, 632);
         
-        
-        if(nextToken != dosym){
+
+        if(nextToken != dosym)
             error(18);
-        }
-        
+
         getNextToken();
         
         //Inside the while body
         statement();
         
-        //Record the current line
-        lastLine = codeIndex;
+        //record current line
+        int lastLine = codeIndex;
         
-        //Change codeIndex to rewrite the dummy line
-        codeIndex = firstLine2;
+        //Get to dummy line
+        codeIndex = firstLine;
         
-        //Rewrite dummy line
+        //Overwrite dummy line
         print(8, 0, lastLine+1);
         
-        //Go back to last line
+        //Get back to actual line
         codeIndex = lastLine;
         
-        print(7, 0, firstLine1);
-        
-    } else if (nextToken == readsym) {  // READ
+        print(7, 0, realFirstLine);
+
+    }else if (nextToken == readsym) {  // READ
         
         getNextToken();
         symbol cur = identifierToSymbol(nextIdentifier);
@@ -696,7 +721,7 @@ void block() {
             // Add constant to the symbol table
             insertToSymbolTable(1);
 
-            // last getToken() will store the comma in t
+            // last getNextToken() will store the comma in nextToken
         } while(nextToken == commasym);
 
         if (nextToken != semicolonsym)
@@ -720,7 +745,7 @@ void block() {
             // Add variable to the symbol table
             insertToSymbolTable(2);
 
-            // last getToken() will store the comma in t
+            // last getNextToken() will store the comma in nextToken
         } while(nextToken == commasym);
 
         if (nextToken != semicolonsym)
@@ -742,7 +767,7 @@ void block() {
         // Add procedure to the symbol table
         insertToSymbolTable(3);
         
-        //getNextToken(); // was causing errors (semicolon read by previous getToken()?)
+        //getNextToken(); // was causing errors (semicolon read by previous getNextToken()?)
             
         if(nextToken != semicolonsym)
             error(5);
