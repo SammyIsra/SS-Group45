@@ -1,8 +1,11 @@
 /*
- * Parser.c
+ * Parser
  *
- *  Created on: Nov 9, 2015
- *      Author: Victoria
+ *	Created on: Nov 9, 2015
+ *  Author: 
+ *		Victoria Rivas
+ *		Sammy Israwi
+ *		Meenakshi Karthikeya
  */
 
 #include <stdio.h>
@@ -46,4 +49,9 @@ readTokens(char* input)
 	if(ipf == NULL)
 		printf("File could not be found");
 
+}
+
+void error( char * msg ){
+	printf("ERROR: %s\n", msg);
+    exit(EXIT_FAILURE);
 }
