@@ -16,11 +16,13 @@
 #define MAX_SYMBOL_TABLE_SIZE 100
 
 //Token table
-typedef enum{
-	nulsym = 1, indentsym, numbersym, plussym, minssym,
-	multsym, slashsym, oddsym, eqsym, neqsym, lessym, semicolonsym,
-	periodsym, becomessym, beginsym, endsym, ifsym, thensym, whilesym,
-	dosym, callsym, constsym, varsym, procsym, writesym, readsym, elsesym
+typedef enum {
+    nulsym = 1, identsym, numbersym, plussym, minussym,
+    multsym, slashsym, oddsym, eqsym, neqsym, lessym, leqsym,
+    gtrsym, geqsym, lparentsym, rparentsym, commasym, semicolonsym,
+    periodsym, becomessym, beginsym, endsym, ifsym, thensym,
+    whilesym, dosym, callsym, constsym, varsym, procsym, writesym,
+    readsym, elsesym
 } token_type;
 
 typedef struct symbol{
@@ -35,6 +37,10 @@ symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
 int nextToken;
 char nextIdentifier[12];
 int nextNumber;
+int symbolsAmount = 0;	//Amount of symbols in the symbol table
+int curLexLevel = -1;
+int branchCon = 0;
+int lineCount;
 
 readTokens(char* input);
 
@@ -140,6 +146,12 @@ void error( int errorNo ){
 		case 25: 
 			msg = "This number is too large";
 			break;
+		case 26:
+		    msg = "An identifier can only be decladed once per lexicographical level";
+		    break;
+		case 27:
+		    msg = "end keyword expected"
+		    break;
 		default:
 			msg = "Error number not recognized";
 			break;
@@ -168,3 +180,322 @@ void getNextToken() {
 	}
 }
 
+//This funciton takes in an identifier and returns the corresponding symbol from
+// the symbol table. 
+symbol identifierToSymbol (char iden[]) {
+	int i;
+	
+	//Downcounting for-loop 
+	for (i = symbolsAmount - 1; i >= 0; i--) {
+		if (strcmp(symbol_table[i].name, nextIdentifier) == 0) {
+			if (symbol_table[i].level <= curLexLevel)
+				return symbol_table[i];
+		}
+	}
+	//If symbol not found, error found.
+	error(11);
+}
+
+void print (int op, int l, int m) {
+	if (branchCon != 0)
+		return;
+	fprintf(ofp,"%d %d %d \n", op, l, m);
+}
+
+// Returns the amount of variables in the current lexicographical level
+int varLexLevelAmount(){
+    
+    int i;
+    int num = 0;
+    
+    for(i = 0 ; i < symbolsAmount ; i++){
+        
+        if(symbol_table[i].level == curLexLevel && symbol_table[i].kind == 2)
+            num++;
+    }
+    
+    return num;
+}
+
+// Returns true of the token received is a relational operator sans 'odd'
+//  Relational operators:
+//      | = | <> | < | <= | > | >= | 
+int isRelationalOp(int token){
+    
+    //Return 1 if it is a relational operator. Otherwise, return 0;
+    return (token == eqsym || token == neqsym || token == lessym 
+        || token == leqsym || token == gtrsym || token == geqsym);
+}
+
+// Insert an indentifier to the Symbol Table
+// Validation is done inside the function
+// Increase of symbol counter is also done inside the function
+void insertToSymbolTable(int kind){
+	
+	//Try to find if the symbol is already declared
+	int i;
+	for(i = 0 ; i < symbolsAmount ; i++){
+		
+		// IF the name of the identifier is already on the symbol table 
+		// AND IF they are both on the same lexicographical level
+		// THEN error out
+        if(strcmp(symbol_table[i].name, nextIdentifier) == 0 
+            && symbol_table[i].level == curLexLevel){
+			
+			//The declared symbol had already been declared in that level
+			error(26);
+		}
+	}
+	
+	//Add the symbol to the symbol table
+	strcpy(symbol_table[symbolsAmount].name, nextIdentifier);
+	symbol_table[symbolsAmount].kind = kind;
+	symbol_table[symbolsAmount].level = curLexLevel;
+	
+	if(kind == 1){
+	    //Add a constant to the symbol table
+	    symbol_table[symbolsAmount].val = nextNumber;
+	    symbol_table[symbolsAmount].addr = 0;
+	    
+	} else if(kind == 2){
+	    //Add a variable to the symbol table
+	    symbol_table[symbolsAmount].addr = 4 + varLexLevelAmount();
+	    
+	} else if(kind == 3){
+	    //Add a procedure to the symbol table
+	    symbol_table[symbolsAmount].addr = lineCount + 1;
+	}
+    
+    symbolsAmount++;
+}
+
+void factor () {
+	if (nextToken == identsym) {
+		symbol cur = identifierToSymbol(nextIdentifier);
+		if (cur.kind == 1) {
+			print(1, 0, cur.val);
+			lineCount++;
+		} else if (cur.kind == 2) {
+			print(3, (curLexLevel - cur.level), cur.addr);
+			lineCount++;
+		} else {
+			error(21);
+		}
+		getNextToken();
+	} else if (nextToken == lparentsym) {
+		getNextToken();
+		expression();
+		if (nextToken != rparentsym)
+			error(22);
+		getNextToken();
+	} else {
+		error(23);
+	}
+}
+
+void condition () {
+	if (nextToken == oddsym) {
+		getNextToken();
+		expression();
+		print(2, 0, 6);
+		lineCount++;
+	} else {
+		expression();
+		if (isRelationalOp(nextToken) == 0)
+			error(20);
+		int mValue = nextToken - 1;
+		getNextToken();
+		expression();
+		print(2, 0,mValue);
+		lineCount++;
+	}
+}
+
+void expression(){
+    
+    if (nextToken == plussym || nextToken == minussym){
+        if (nextToken == minussym){
+            //When we have a negative number
+            print(2, 0, 1); //OPR 0 1
+            lines++;
+        } else {
+            getNextToken();
+        }
+    }
+    
+    term();
+    
+    while(nextToken == plussym || nextToken == minussym){
+        
+        /* Note:
+            The reason why getNextToken() and term() are not called twice
+            inside the if-else statement is because we need to remember what 
+            was the token we had, - or +, before it changes on the next 
+            getNextToken()
+        */
+        
+        if(nextToken == plussym){
+            //We add an addition to the mcode
+            getNextToken();
+            term();
+            print(2, 0, 2); //OPR 0 2
+        } else {
+            //We add a substraction to the mcode
+            getNextToken();
+            term();
+            print(2, 0, 3); //OPR 0 3
+        }
+        
+        //Increase line counter
+        lineCount++;
+    }
+}
+
+void term(){
+    
+    factor();
+    
+    while (token == multsym || token == slashsym){
+        
+        /* Note:
+            The reason why getNextToken() and factor() are not called twice
+            inside the if-else statement is because we need to remember what 
+            was the token we had, * or /, before it changes on the next 
+            getNextToken()
+        */
+        if (token == multsym){
+            //We add a multiplier to the mcode
+            getNextToken();
+            factor();
+            print(2, 0, 4); //OPR 0 4
+        } else {
+            //We add a division to the mcode
+            getNextToken();
+            factor();
+            print(2, 0, 5); //OPR 0 5
+        }
+        
+        //Increase line counter
+        lineCount++;
+    }
+}
+
+void statement(){
+    
+    if (nextToken == identsym){         // IDENTIFIER
+        
+        char temp[12];
+        strcpy(temp, nextIdentifier);
+        
+        if(identifierToSymbol(nextIdentifier).kind != 2){
+            error(12);
+        }
+        
+        getNextToken();
+        
+        if(nextToken != becomessym){
+            error(3);
+        } 
+        
+        getNextToken();
+        expression();
+        
+        symbol currentSym = identifierToSymbol(temp);
+        
+        // STO L M
+        print(4, (curLexLevel - currentSym.level), currentSym.addr );   
+        lineCount++;
+        
+    } else if (nextToken == callsym){   // CALL
+        
+        getNextToken();
+        
+        if(nextToken != identsym){
+            error(14);
+        }
+        
+        if(identifierToSymbol(nextIdentifier).kind != 3){
+            error(15);
+        }
+        
+        symbol current = identifierToSymbol(nextIdentifier);
+        print(5, (curLexLevel-current.level), current.addr);    // CAL L M
+        
+        lineCount++;
+        
+        getNextToken();
+        
+    } else if (nextToken == beginsym){  // BEGIN
+        
+        getNextToken();
+        statement();
+        
+        while(nextToken == semicolonsym){
+            getNextToken();
+            statement();
+        }
+        
+        if(nextToken != endsym){
+            error(27);
+        }
+        
+        getNextToken();
+        
+    } else if (nextToken == ifsym){     // IF
+        
+        getNextToken();
+        
+        condition();
+        
+        if(nextToken != thensym){
+            error(16);
+        }
+        
+        getNextToken();
+        
+        statement();
+        
+    } else if (nextToken == whilesym){  // WHILE
+        
+        if (nextToken != dosym)
+        	error(18);
+        
+        getNextToken();
+        
+        condition();
+        
+        if(nextToken != dosym){
+            error(18);
+        }
+        
+        getNextToken();
+        
+        statement();
+    } else if (nextToken == readsym) {  // READ
+        
+        getNextToken();
+        symbol cur = identifierToSymbol(nextIdentifier);
+        
+        print(9,0,1);
+        print(4, (curLexLevel - cur.level), cur.addr)
+        lineCount+=2;
+        getNextToken();
+        
+    } else if (nextToken == writesym) {  // WRITE
+        
+        getNextToken();
+        symbol cur = identifierToSymbol(nextIdentifier);
+        
+        if (cur.kind == 1)
+        	print(1, 0, cur.val)
+        	
+        if (cur.kind == 2)
+        	print(3, (curLexLevel - cur.level), cur.addr)
+      
+        print(9,0,0)
+        lineCount+=2;
+        getNextToken();
+        
+    }
+}
+void block(int )
