@@ -14,6 +14,7 @@
 #include <ctype.h>
 
 #define MAX_SYMBOL_TABLE_SIZE 100
+#define MAX_CODE_LENGTH 500
 
 //Token table
 typedef enum {
@@ -33,14 +34,22 @@ typedef struct symbol{
 	int addr;		//M address
 } symbol;
 
+typedef struct instruction{
+    int op;
+    int l;
+    int m;
+} instruction;
+
 symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
-int nextToken;
+instruction code[MAX_CODE_LENGTH];
 char nextIdentifier[12];
+int nextToken;
 int nextNumber;
 int symbolsAmount = 0;	//Amount of symbols in the symbol table
 int curLexLevel = -1;
 int branchCon = 0;
 int lineCount;
+int codeIndex = 0; //Index of the code that we are writing to, used for jumps and such
 
 readTokens(char* input);
 
@@ -197,9 +206,21 @@ symbol identifierToSymbol (char iden[]) {
 }
 
 void print (int op, int l, int m) {
+    
+    if(codeIndex > MAX_CODE_LENGTH){
+        error(28); "Generated mcode is greater than the imposed limit, %d", MAX_CODE_LENGTH);
+    }
+    
+    code[codeIndex].op = op;
+    code[codeIndex].l = l;
+    code[codeIndex].m = m;
+    codeIndex++;
+    
+    /*  Old code
 	if (branchCon != 0)
 		return;
 	fprintf(ofp,"%d %d %d \n", op, l, m);
+	*/
 }
 
 // Returns the amount of variables in the current lexicographical level
@@ -443,6 +464,11 @@ void statement(){
         
     } else if (nextToken == ifsym){     // IF
         
+        int firstJump;
+        int secondJump;
+        int currentLine;
+        int lastLine;
+        
         getNextToken();
         
         condition();
@@ -451,18 +477,75 @@ void statement(){
             error(16);
         }
         
-        getNextToken();
+        //Record the code index, make a dummy line
+        firstJump = codeIndex;
+        print(0, 0, 0);
         
+        getNextToken();
         statement();
+        
+        if(nextToken == elsesym){
+            
+            getNextToken();
+            
+            //Get location of dummy line 
+            // (Location of the second jump)
+            //second_Jump will land at the line at end of execution
+            secondJump = codeIndex;
+            //Dummy line
+            print(0, 0, 0);
+            
+            //Record the current line
+            currentLine = codeIndex;
+            
+            codeIndex = firstJump;
+
+            print(8, 0, currentLine);
+        
+            statement();
+            
+            currentLine = codeIndex;
+            
+            codeIndex = secondJump;
+            
+            print(7, 0, currentLine);
+            
+            codeIndex = currentLine;
+        
+            
+        } else {
+            
+            //Record where the last line is
+            lastLine = codeIndex;
+            
+            //Make the code inex the place where the first jump departs from
+            codeIndex = firstJump;
+            
+            //Rewrite the dummy line from the IF statement
+            print(8, 0, lastLine);
+            
+            //codeIndex is now back at the rightful place
+            codeIndex = lastLine;
+        }
         
     } else if (nextToken == whilesym){  // WHILE
         
         if (nextToken != dosym)
         	error(18);
         
+        int firstLine1;
+        int firstLine2;
+        int lastLine;
+        
         getNextToken();
         
+        firstLine1 = codeIndex;
         condition();
+        firstLine2 = codeIndex;
+        
+        // Print the dummy line
+        print(0, 0, 0);
+        
         
         if(nextToken != dosym){
             error(18);
@@ -470,7 +553,23 @@ void statement(){
         
         getNextToken();
         
+        //Inside the while body
         statement();
+        
+        //Record the current line
+        lastLine = codeIndex;
+        
+        //Change codeIndex to rewrite the dummy line
+        codeIndex = firstLine2;
+        
+        //Rewrite dummy line
+        print(8, 0, lastLine+1);
+        
+        //Go back to last line
+        codeIndex = lastLine;
+        
+        print(7, 0, firstLine1);
+        
     } else if (nextToken == readsym) {  // READ
         
         getNextToken();
@@ -498,4 +597,54 @@ void statement(){
         
     }
 }
-void block(int )
+void block(int table) {
+	curLexLevel++;
+	if (nextToken == constsym) {
+		do {
+			getNextToken();
+			if (nextToken != identsym)
+				error(4);
+			getNextToken();
+			if (nextToken == becomessym)
+				error(1);
+			if (nextToken != eqsym) 
+				error (2);
+			getNextToken();
+			if (nextToken != numbersym)
+				error(3);
+			if (table == 0)
+				insertToSymbolTable(1);
+			getNextToken();
+		} while (nextToken == commasym);
+		
+		if (nextToken != semicolonsym)
+			error(5);
+		getNextToken();
+	}
+	if (nextToken == varsym) {
+		do {
+			getNextToken();
+			if (nextToken != identsym)
+				error(4);
+			if (table == 0)
+				insertToSymbolTable(2);
+			getNextToken();
+		} while (nextToken == commasym);
+		
+		if (nextToken != semicolonsym)
+			error(5);
+		getNextToken();
+	}
+	while (nextToken == procsym) {
+		getNextToken();
+		if (nextToken != identsym)
+			error(4);
+		if (table == 0)
+			insertToSymbolTable(3);
+		getNextToken();
+		if (nextToken != semicolonsym)
+			error(6);
+			
+		
+	}
+}
