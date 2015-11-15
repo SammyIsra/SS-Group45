@@ -15,6 +15,7 @@
 
 #define MAX_SYMBOL_TABLE_SIZE 100
 #define MAX_CODE_LENGTH 500
+#define DEBUG 1
 
 //Token table
 typedef enum {
@@ -42,6 +43,11 @@ typedef struct instruction{
 
 symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
 instruction code[MAX_CODE_LENGTH];
+//the lexemelist fp
+FILE* ifp;
+//output file pointer
+FILE* ofp;
+
 char nextIdentifier[12];
 int nextToken;
 int nextNumber;
@@ -51,15 +57,29 @@ int branchCon = 0;
 int lineCount;
 int codeIndex = 0; //Index of the code that we are writing to, used for jumps and such
 
-readTokens(char* input);
+/*
+ *  FUNCTION PROTOTYPES
+ */
+void readTokens(char* input);
+void error( int errorNo );
+void getNextToken();
+symbol identifierToSymbol (char iden[]);
+void print (int op, int l, int m);
+void printMcode();
+int varLexLevelAmount();
+int isRelationalOp(int token);
+void insertToSymbolTable(int kind);
+void printSymbolTable();
+void program();
+void block();
+void statement();
+void condition();
+void expression();
+void term();
+void factor();
 
-int main()
-{
-	readTokens("tokenlist.txt");
 
-}
-
-readTokens(char* input)
+void readTokens(char* input)
 {
 	FILE *ipf = fopen(input, "r");
 	char c = '0';
@@ -81,111 +101,122 @@ void error( int errorNo ){
 	
 	switch (errorNo){
 		case 1: 
-			msg = "Use = instead of :=";
+			strcpy(msg, "Use = instead of :=");
 			break;
 		case 2: 
-			msg = "= must be followed by a number";
+			strcpy(msg,"= must be followed by a number");
 			break;
 		case 3: 
-			msg = "Identifier must be followed by :=";
+			strcpy(msg, "Identifier must be followed by :=");
 			break;
 		case 4: 
-			msg = "const, var, procedure must be followed by identifier";
+			strcpy(msg, "const, var, procedure must be followed by identifier");
 			break;
 		case 5: 
-			msg = "Semicolon or comma missing";
+			strcpy(msg, "Semicolon or comma missing");
 			break;
 		case 6: 
-			msg = "Incorrect symbol after statement part in block";
+			strcpy(msg, "Incorrect symbol after statement part in block");
 			break;
 		case 7: 
-			msg = "Statement expected";
+			strcpy(msg, "Statement expected");
 			break;
 		case 8: 
-			msg = "Incorrect symbol after statement part in block";
+			strcpy(msg, "Incorrect symbol after statement part in block");
 			break;
 		case 9: 
-			msg = "Period expected";
+			strcpy(msg, "Period expected");
 			break;
 		case 10: 
-			msg = "Semicolon between statements missing";
+			strcpy(msg, "Semicolon between statements missing");
 			break;
 		case 11: 
-			msg = "Undeclared identifier";
+			strcpy(msg, "Undeclared identifier");
 			break;
 		case 12: 
-			msg = "Assignment to constant or procedure is not allowed";
+			strcpy(msg, "Assignment to constant or procedure is not allowed");
 			break;
 		case 13: 
-			msg = "Assignment operator expected";
+			strcpy(msg, "Assignment operator expected");
 			break;
 		case 14: 
-			msg = "call must be followed by an identifier";
+			strcpy(msg, "call must be followed by an identifier");
 			break;
 		case 15: 
-			msg = "Call of a constant or variable is meaningless";
+			strcpy(msg, "Call of a constant or variable is meaningless");
 			break;
 		case 16: 
-			msg = "then expected";
+			strcpy(msg, "then expected");
 			break;
 		case 17: 
-			msg = "Semicolon or } expected";
+			strcpy(msg, "Semicolon or } expected");
 			break;
 		case 18: 
-			msg = "do expected";
+			strcpy(msg, "do expected");
 			break;
 		case 19: 
-			msg = "Incorrect symbol following statement";
+			strcpy(msg, "Incorrect symbol following statement");
 			break;
 		case 20: 
-			msg = "Relational operator expected";
+			strcpy(msg,"Relational operator expected");
 			break;
 		case 21: 
-			msg = "Expression must not contain a procedure identifier";
+			strcpy(msg,"Expression must not contain a procedure identifier");
 			break;
 		case 22: 
-			msg = "Right parenthesis missing";
+			strcpy(msg, "Right parenthesis missing");
 			break;
 		case 23: 
-			msg = "The preceding factor cannot begin witht this symbol";
+			strcpy(msg,"The preceding factor cannot begin witht this symbol");
 			break;
 		case 24: 
-			msg = "An expression cannot begin with this symbol";
+			strcpy(msg,"An expression cannot begin with this symbol");
 			break;
 		case 25: 
-			msg = "This number is too large";
+			strcpy(msg, "This number is too large");
 			break;
 		case 26:
-		    msg = "An identifier can only be decladed once per lexicographical level";
+		    strcpy(msg, "An identifier can only be decladed once per lexicographical level");
 		    break;
 		case 27:
-		    msg = "end keyword expected"
+		    strcpy(msg, "end keyword expected");
+		    break;
+		case 28:
+		    strcpy(msg, "Generated mcode is greater than the imposed limit");
 		    break;
 		default:
-			msg = "Error number not recognized";
+			strcpy(msg,"Error number not recognized");
 			break;
 	}
 	
+	
+	
 	printf("ERROR #%d: %s.\n", errorNo, msg);
+	printSymbolTable();
+	
     exit(EXIT_FAILURE);
 }
     
 // This function will grab the next token from the token list
 void getNextToken() {
 	
-	//Grabbing the next identifier
-	if (nextToken == indentsym) {
-		fscanf(ifp, "%s", nextIdentifier)
-	}
-	
-	//Grabbing the next number
-	if (nextToken == indentsym) {
-		fscanf(ifp, "%s", nextNumber)
-	}
-	
 	//If there's no token, nextToken is assigned to -1
 	if (fscanf(ifp, "%d", &nextToken) == EOF) {
 		nextToken = -1;
+	}
+	
+	if(DEBUG){
+	    printf("New token is %d\n", nextToken);
+	}
+	
+	//Grabbing the next identifier
+	if (nextToken == identsym) {
+		fscanf(ifp, "%s", nextIdentifier);
+	}
+	
+	//Grabbing the next number
+	if (nextToken == numbersym) {
+		fscanf(ifp, "%d", &nextNumber);
 	}
 }
 
@@ -205,10 +236,20 @@ symbol identifierToSymbol (char iden[]) {
 	error(11);
 }
 
+void printSymbolTable(){
+    int i;
+    
+    printf("**Symbol table**\n");
+    
+    for(i = 0; i < symbolsAmount; i++){
+        printf("%d %s %d %d %d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val, symbol_table[i].level, symbol_table[i].addr);
+    }
+}
+
 void print (int op, int l, int m) {
     
     if(codeIndex > MAX_CODE_LENGTH){
-        error(28); "Generated mcode is greater than the imposed limit, %d", MAX_CODE_LENGTH);
+        error(28); 
     }
     
     code[codeIndex].op = op;
@@ -303,6 +344,10 @@ void factor () {
 			error(21);
 		}
 		getNextToken();
+	} else if (nextToken == numbersym) {
+		print(1,0, nextNumber);
+		lineCount++;
+		getNextToken();
 	} else if (nextToken == lparentsym) {
 		getNextToken();
 		expression();
@@ -332,13 +377,27 @@ void condition () {
 	}
 }
 
+void program(){
+    
+    getNextToken();
+    
+    block();
+    
+    if(nextToken != periodsym){
+        error(9);
+    }
+    
+    // SIO 0 3
+    print(11, 0, 3);
+}
+
 void expression(){
     
     if (nextToken == plussym || nextToken == minussym){
         if (nextToken == minussym){
             //When we have a negative number
             print(2, 0, 1); //OPR 0 1
-            lines++;
+            lineCount++;
         } else {
             getNextToken();
         }
@@ -376,7 +435,7 @@ void term(){
     
     factor();
     
-    while (token == multsym || token == slashsym){
+    while (nextToken == multsym || nextToken == slashsym){
         
         /* Note:
             The reason why getNextToken() and factor() are not called twice
@@ -384,7 +443,7 @@ void term(){
             was the token we had, * or /, before it changes on the next 
             getNextToken()
         */
-        if (token == multsym){
+        if (nextToken == multsym){
             //We add a multiplier to the mcode
             getNextToken();
             factor();
@@ -576,7 +635,7 @@ void statement(){
         symbol cur = identifierToSymbol(nextIdentifier);
         
         print(9,0,1);
-        print(4, (curLexLevel - cur.level), cur.addr)
+        print(4, (curLexLevel - cur.level), cur.addr);
         lineCount+=2;
         getNextToken();
         
@@ -586,65 +645,147 @@ void statement(){
         symbol cur = identifierToSymbol(nextIdentifier);
         
         if (cur.kind == 1)
-        	print(1, 0, cur.val)
+        	print(1, 0, cur.val);
         	
         if (cur.kind == 2)
-        	print(3, (curLexLevel - cur.level), cur.addr)
+        	print(3, (curLexLevel - cur.level), cur.addr);
       
-        print(9,0,0)
+        print(9,0,0);
         lineCount+=2;
         getNextToken();
         
     }
 }
-void block(int table) {
-	curLexLevel++;
-	if (nextToken == constsym) {
-		do {
-			getNextToken();
-			if (nextToken != identsym)
-				error(4);
-			getNextToken();
-			if (nextToken == becomessym)
-				error(1);
-			if (nextToken != eqsym) 
-				error (2);
-			getNextToken();
-			if (nextToken != numbersym)
-				error(3);
-			if (table == 0)
-				insertToSymbolTable(1);
-			getNextToken();
-		} while (nextToken == commasym);
-		
-		if (nextToken != semicolonsym)
-			error(5);
-		getNextToken();
+void block() {
+
+    curLexLevel++;
+    int space = 4;
+	int firstLine = codeIndex; 
+	print(7, 0, 0);  // Step 1
+	
+	if(DEBUG){
+	    printf("BLOCK\n");
 	}
-	if (nextToken == varsym) {
-		do {
-			getNextToken();
-			if (nextToken != identsym)
-				error(4);
-			if (table == 0)
-				insertToSymbolTable(2);
-			getNextToken();
-		} while (nextToken == commasym);
-		
-		if (nextToken != semicolonsym)
-			error(5);
-		getNextToken();
-	}
-	while (nextToken == procsym) {
-		getNextToken();
-		if (nextToken != identsym)
-			error(4);
-		if (table == 0)
-			insertToSymbolTable(3);
-		getNextToken();
-		if (nextToken != semicolonsym)
-			error(6);
-			
-		
-	}
+
+    // Constant?
+    if(nextToken == constsym) {
+        do {
+            
+            if(DEBUG){
+        	    printf("Const\n");
+        	}
+        	
+        	getNextToken();
+
+            if(nextToken != identsym)
+                error(4);
+
+            getNextToken();
+            
+
+            if(nextToken != eqsym)
+                error(3);
+
+            getNextToken();
+
+            if(nextToken != numbersym)
+                error(2);
+
+            getNextToken();
+
+            // Add constant to the symbol table
+            insertToSymbolTable(1);
+
+            // last getToken() will store the comma in t
+        } while(nextToken == commasym);
+
+        if (nextToken != semicolonsym)
+            error(5);
+            
+        getNextToken();
+    }
+    if(nextToken == varsym) {
+        int numVars = 0;    
+        do {
+            getNextToken();
+
+            if(nextToken != identsym)
+                error(4);
+               
+            numVars++;    
+            // space++;
+
+            getNextToken();
+
+            // Add variable to the symbol table
+            insertToSymbolTable(2);
+
+            // last getToken() will store the comma in t
+        } while(nextToken == commasym);
+
+        if (nextToken != semicolonsym)
+            error(5);
+            
+       	print(6, 0, numVars); // INC, 0, M for allocating variable space
+        getNextToken();
+    }
+    
+    // Procedure?
+    while(nextToken == procsym) {
+        getNextToken();
+        
+        if(nextToken != identsym)
+            error(4);
+            
+        getNextToken();
+            
+        // Add procedure to the symbol table
+        insertToSymbolTable(3);
+        
+        //getNextToken(); // was causing errors (semicolon read by previous getToken()?)
+            
+        if(nextToken != semicolonsym)
+            error(5);
+            
+        getNextToken();
+            
+        block();
+        
+        if(nextToken != semicolonsym)
+            error(5);
+            
+        getNextToken();
+    }
+    
+    int lastLine = codeIndex;
+    codeIndex = firstLine;
+    print(7, 0, lastLine+1);
+    codeIndex = lastLine+1;
+    print(6, 0, space); // Step 2
+
+    statement();
+    
+    print(2, 0, 0); // Step 4
+    curLexLevel--;
+}
+
+void printMcode(){
+    
+    int i;
+    for (i = 0; i < codeIndex; i++) {
+    	fprintf(ofp, "%d %d %d\n", code[i].op,code[i].l, code[i].m);
+    }
+    
+}
+
+
+void main()
+{
+    ifp = fopen("tokenlist.txt", "r");
+    ofp = fopen("mcode.txt","w");
+
+    program();
+    printMcode();
+    fclose(ifp);
+    fclose(ofp);
 }

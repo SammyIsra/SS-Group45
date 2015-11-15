@@ -13,7 +13,7 @@
 
 //Function prototypes
 void cleanCode(char* inputFile, char* outputFile);
-void error(char *msg);
+void error(int line, char *msg);
 int tokenTranslate(char* temp);
 void lexemTable(char* inputFile, char* outputFile);
 char* appendC(char *temp, int tempsize, char c);
@@ -54,8 +54,8 @@ int main(){
         Prints the error, and
         exits the program
 */
-void error(char *msg){
-    printf("ERROR: %s\n", msg);
+void error(int line, char *msg){
+    printf("Line %d - ERROR: %s\n", line, msg);
     exit(EXIT_FAILURE);
 }
 
@@ -77,7 +77,7 @@ void cleanCode(char* inputFile, char* outputFile){
 
     //If the pointer to the input file returns null, end the program
     if(ipf == NULL)
-        error("File not found");
+        error(0, "File not found");
 
     while(1)
     {
@@ -147,10 +147,12 @@ void lexemTable(char* inputFile, char* outputFile){
     input = fopen(inputFile, "r");
     //Output file
     output = fopen(outputFile, "w");
+    
+    int lineCount = 0;
 
     // Error opening the file
     if(input == NULL)
-        error("Could not open the file.\n");
+        error(lineCount, "Could not open the file.\n");
         
     char temp[TOKEN_MAX_LEN] = "";   // we will read the token into this
     char c = '0';                   // current char
@@ -165,7 +167,11 @@ void lexemTable(char* inputFile, char* outputFile){
     while(c != EOF){
 
         c = fgetc(input);
-
+        
+        if(c == '\n'){
+            lineCount++;
+        }
+        
         if(isalpha(c)){     //If the char is a letter
 
             //This gets the full token
@@ -186,7 +192,7 @@ void lexemTable(char* inputFile, char* outputFile){
             else if(strlen(temp) <= IDENTIFIER_MAX_LEN) //If the token is an identifier and does not exceed the length
                 fprintf(output, "%s\t%d\n", temp, identsym);
             else    //Not a reserved word, and name is too damn long
-                error("ERROR: Name of identifier is too long.\n");
+                error(lineCount, "Name of identifier is too long.\n");
 
             //Reset the size of temp buffer to 0
             temp[0] = '\0';
@@ -202,7 +208,7 @@ void lexemTable(char* inputFile, char* outputFile){
 
             //Temp should NOT be tjos long
             if(isalpha(c))
-                error("ERROR: Variables should not start with numbers.\n");
+                error(lineCount, "Variables should not start with numbers.\n");
 
             //Remember ungetc?
             ungetc(c, input);
@@ -210,7 +216,7 @@ void lexemTable(char* inputFile, char* outputFile){
             if(strlen(temp) <= NUMBER_MAX_LEN)
                 fprintf(output, "%s\t%d\n", temp, numbersym);
             else
-                error("ERROR: Number is too long.\n");
+                error(lineCount, "Number is too long.\n");
 
             temp[0] = '\0';
 
@@ -231,7 +237,7 @@ void lexemTable(char* inputFile, char* outputFile){
                     doubleSymbol = 1;
                 }else{
                     ungetc(next, input);
-                    error("ERROR: Invalid symbol.\n");
+                    error(lineCount, "Invalid symbol.\n");
                 }
             }
 
@@ -301,7 +307,7 @@ void lexemTable(char* inputFile, char* outputFile){
             //  *is NOT one of our special characters, AND
             //  *is NOT a digit, AND
             //  *is NOT a alpha character   
-            error("ERROR: Invalid symbol.\n");
+            error(lineCount, "Invalid symbol.\n");
         }
     }
 
@@ -432,7 +438,7 @@ void tokensList(char* inputFile, char* outputFile){
     char hold[TOKEN_MAX_LEN] = "";
 
     if(input == NULL)
-        error("Could not open the Lexem Table file");
+        error(lineCount, "Could not open the Lexem Table file");
 
     //Remove the headers from the stream
     fscanf(input, "%s", trash); //Header 1
