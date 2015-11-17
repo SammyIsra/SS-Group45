@@ -205,10 +205,6 @@ void getNextToken() {
 		nextToken = -1;
 	}
 	
-	if(DEBUG){
-	    printf("New token is %d\n", nextToken);
-	}
-	
 	//Grabbing the next identifier
 	if (nextToken == identsym) {
 		fscanf(ifp, "%s", nextIdentifier);
@@ -247,6 +243,10 @@ void printSymbolTable(){
 }
 
 void print (int op, int l, int m) {
+    
+    if(DEBUG){
+        printf("mcode %d: %d %d %d\n", codeIndex, op, l, m);
+    }
     
     if(codeIndex > MAX_CODE_LENGTH){
         error(28); 
@@ -685,6 +685,7 @@ void block() {
 
     curLexLevel++;
     int space = 4;
+    //Record position of dummy instruction
 	int firstLine = codeIndex; 
 	print(7, 0, 0);  // Step 1
 	
