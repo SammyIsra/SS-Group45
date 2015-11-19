@@ -68,6 +68,7 @@ void print (int op, int l, int m);
 void printMcode();
 int varLexLevelAmount();
 int isRelationalOp(int token);
+void enter(int kind, char* name, int val, int lvl, int addr);
 void insertToSymbolTable(int kind);
 void printSymbolTable();
 void program();
@@ -287,6 +288,51 @@ int isRelationalOp(int token){
     //Return 1 if it is a relational operator. Otherwise, return 0;
     return (token == eqsym || token == neqsym || token == lessym 
         || token == leqsym || token == gtrsym || token == geqsym);
+}
+
+/*
+    Inserts a symbol to the symbol table
+    if kind == 1, the symbol is a constant
+    if kind == 2, the symbol is a variable
+    if kind == 3, the symbol is a procedure
+    val is the value of the symbol (variables and constants only)
+    lvl is the lexicographical level
+    addr is the location in the mcode
+*/
+void enter(int kind, char* name, int val, int lvl, int addr){
+    
+    //Try to find if the symbol is already declared
+	int i;
+	for(i = 0 ; i < symbolsAmount ; i++){
+		
+		// IF the name of the identifier is already on the symbol table 
+		// AND IF they are both on the same lexicographical level
+		// THEN error out
+        if(strcmp(symbol_table[i].name, nextIdentifier) == 0 
+            && symbol_table[i].level == curLexLevel){
+			
+			//The declared symbol had already been declared in that level
+			error(26);
+		}
+	}
+	
+    //Copy the kind 
+    symbol_table[symbolsAmount].kind = kind;
+    
+    //Copy the name
+    strcpy(symbol_table[symbolsAmount].name, name);
+    
+    //Copy the value (Only relevant if a constant)
+    symbol_table[symbolsAmount].val = val;
+    
+    //Copy lexicographical level
+    symbol_table[symbolsAmount].level = level;
+    
+    //Copy the address
+    symbol_table[symbolsAmount].addr = addr;
+    
+    //Increase symbols counter
+    symbolsAmount++;
 }
 
 // Insert an indentifier to the Symbol Table
