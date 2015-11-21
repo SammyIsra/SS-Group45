@@ -53,8 +53,8 @@ int nextToken;
 int nextNumber;
 int symbolsAmount = 0;	//Amount of symbols in the symbol table
 int curLexLevel = -1;
+int lineCount = 0;
 int branchCon = 0;
-int lineCount;
 int codeIndex = 0; //Index of the code that we are writing to, used for jumps and such
 
 /*
@@ -347,6 +347,7 @@ void enter(int kind, char* name, int val, int level, int addr){
     symbolsAmount++;
 }
 
+//      DEPRECATED
 // Insert an indentifier to the Symbol Table
 // Validation is done inside the function
 // Increase of symbol counter is also done inside the function
@@ -394,17 +395,14 @@ void factor () {
 		symbol cur = identifierToSymbol(nextIdentifier);
 		if (cur.kind == 1) {
 			print(1, 0, cur.val);
-			lineCount++;
 		} else if (cur.kind == 2) {
 			print(3, (curLexLevel - cur.level), cur.addr);
-			lineCount++;
 		} else {
 			error(21);
 		}
 		getNextToken();
 	} else if (nextToken == numbersym) {
 		print(1,0, nextNumber);
-		lineCount++;
 		getNextToken();
 	} else if (nextToken == lparentsym) {
 		getNextToken();
@@ -422,7 +420,6 @@ void condition () {
 		getNextToken();
 		expression();
 		print(2, 0, 6);
-		lineCount++;
 	} else {
 		expression();
 		if (isRelationalOp(nextToken) == 0)
@@ -431,7 +428,6 @@ void condition () {
 		getNextToken();
 		expression();
 		print(2, 0,mValue);
-		lineCount++;
 	}
 }
 
@@ -455,7 +451,6 @@ void expression(){
         if (nextToken == minussym){
             //When we have a negative number
             print(2, 0, 1); //OPR 0 1
-            lineCount++;
         } else {
             getNextToken();
         }
@@ -483,9 +478,6 @@ void expression(){
             term();
             print(2, 0, 3); //OPR 0 3
         }
-        
-        //Increase line counter
-        lineCount++;
     }
 }
 
@@ -512,9 +504,6 @@ void term(){
             factor();
             print(2, 0, 5); //OPR 0 5
         }
-        
-        //Increase line counter
-        lineCount++;
     }
 }
 
@@ -536,13 +525,17 @@ void statement(){
         } 
         
         getNextToken();
+        
         expression();
         
         symbol currentSym = identifierToSymbol(temp);
         
         // STO L M
-        print(4, (curLexLevel - currentSym.level), currentSym.addr );   
-        lineCount++;
+        if(DEBUG){
+            printf("STO curLexLevel: %d\n", curLexLevel);
+        }
+        
+        print(4, (curLexLevel - currentSym.level), currentSym.addr );
         
     } else if (nextToken == callsym){   // CALL
         
@@ -552,14 +545,13 @@ void statement(){
             error(14);
         }
         
-        if(identifierToSymbol(nextIdentifier).kind != 3){
+        symbol proc = identifierToSymbol(nextIdentifier);
+        
+        if(proc.kind != 3){
             error(15);
         }
         
-        symbol current = identifierToSymbol(nextIdentifier);
-        print(5, (curLexLevel-current.level), current.addr);    // CAL L M
-        
-        lineCount++;
+        print(5, (curLexLevel-proc.level), proc.addr);    // CAL L M
         
         getNextToken();
         
@@ -579,8 +571,8 @@ void statement(){
         
         getNextToken();
         
-    }  else if(nextToken == ifsym)
-    {
+    }  else if(nextToken == ifsym){
+        
         if(DEBUG)
             printf("STATEMENT: ifsym\n");
 
@@ -594,7 +586,7 @@ void statement(){
             check for else
             *First jump arrives here*
             Go through statement inside "else"
-            *second jumo arrives here*
+            *second jump arrives here*
             end of "if-else"
         
         */
@@ -606,7 +598,9 @@ void statement(){
         if(nextToken != thensym)
             error(16);
 
-
+        if(DEBUG){
+            printf("Then:\n");
+        }
         //Get location of dummy line (Where first jump will be)
         // first_jump will jump to the line before the statement in else
         int first_jump = codeIndex;
@@ -619,9 +613,18 @@ void statement(){
         //Inside the if
         statement();
   
+        if(DEBUG){
+            printf("End of Then\n");
+        }
+        
         //If we have an else
         if(nextToken == elsesym) 
         {
+            
+            if(DEBUG){
+                printf("Else:\n");
+            }
+            
         	getNextToken();
         	
         	//Get location of dummy line (Where second jump will be)
@@ -654,9 +657,10 @@ void statement(){
         	codeIndex = curLine;
         	//End of second_jump...
         	
-        }
-        else
-        {
+        	printf("End of Else\n");
+        	
+        } else {
+            
             //record current line
             int lastLine = codeIndex;
             
@@ -669,26 +673,23 @@ void statement(){
             //Get back to actual line
             codeIndex = lastLine;
         }
-
-        
     }
     else if(nextToken == whilesym){
         
         if(DEBUG)
             printf("STATEMENT: whilesym\n");
 
+        // Record the line before the conditional
+        int line1 = codeIndex;
         getNextToken();
-
-        // ****** Put first line here 
-        int realFirstLine = codeIndex;
         
         condition();
         
-        int firstLine = codeIndex;
+        // Record the line after the conditional
+        int line2 = codeIndex;
 
         //Dummy line
-        print(0, 0, 632);
-        
+        print(8, 0, -1);
 
         if(nextToken != dosym)
             error(18);
@@ -702,15 +703,17 @@ void statement(){
         int lastLine = codeIndex;
         
         //Get to dummy line
-        codeIndex = firstLine;
+        //codeIndex = firstLine;
         
         //Overwrite dummy line
-        print(8, 0, lastLine+1);
+        print(7, 0, line1);
+        
+        codeAddrMod(line2, codeIndex);
         
         //Get back to actual line
-        codeIndex = lastLine;
+        //codeIndex = lastLine;
         
-        print(7, 0, realFirstLine);
+        //print(7, 0, realFirstLine);
 
     }else if (nextToken == readsym) {  // READ
         
@@ -719,7 +722,6 @@ void statement(){
         
         print(9,0,1);
         print(4, (curLexLevel - cur.level), cur.addr);
-        lineCount+=2;
         getNextToken();
         
     } else if (nextToken == writesym) {  // WRITE
@@ -734,7 +736,6 @@ void statement(){
         	print(3, (curLexLevel - cur.level), cur.addr);
       
         print(9,0,0);
-        lineCount+=2;
         getNextToken();
         
     }
@@ -845,12 +846,11 @@ void block() {
             error(4);
         
         
+        //INSER BOGUS ADDRESS. WILL BE MODIFIED LATER.
+        enter(3, nextIdentifier, 0, curLexLevel, codeIndex);
+        
         getNextToken();
             
-        //INSER BOGUS ADDRESS. WILL BE MODIFIED LATER.
-        enter(3, nextIdentifier, 0, curLexLevel, 000);
-        
-        
         // Add procedure to the symbol table | DEPRECATED
         //insertToSymbolTable(3);
         
@@ -894,7 +894,7 @@ void block() {
     print(6, 0, space);
     statement();
     print(2, 0, 0);
-    curLexLevel++;
+    curLexLevel--;
     
     /*  DEPRECATED. SAME AS THE THING ABOVE
     int lastLine = codeIndex;
