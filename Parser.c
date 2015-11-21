@@ -64,7 +64,8 @@ void readTokens(char* input);
 void error( int errorNo );
 void getNextToken();
 symbol identifierToSymbol (char iden[]);
-void print (int op, int l, int m);
+int codeAddrMod (int loc, int m);
+int print (int op, int l, int m);
 void printMcode();
 int varLexLevelAmount();
 int isRelationalOp(int token);
@@ -234,16 +235,17 @@ symbol identifierToSymbol (char iden[]) {
 }
 
 void printSymbolTable(){
+    
     int i;
     
     printf("**Symbol table**\n");
-    
+    printf("kind\tname\tvalue\tlevel\taddress\n");
     for(i = 0; i < symbolsAmount; i++){
-        printf("%d %s %d %d %d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val, symbol_table[i].level, symbol_table[i].addr);
+        printf("%d\t%s\t%d\t%d\t%d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val, symbol_table[i].level, symbol_table[i].addr);
     }
 }
 
-void print (int op, int l, int m) {
+int print (int op, int l, int m) {
     
     if(DEBUG){
         printf("mcode %d: %d %d %d\n", codeIndex, op, l, m);
@@ -256,13 +258,23 @@ void print (int op, int l, int m) {
     code[codeIndex].op = op;
     code[codeIndex].l = l;
     code[codeIndex].m = m;
-    codeIndex++;
+    return codeIndex++;
     
     /*  Old code
 	if (branchCon != 0)
 		return;
 	fprintf(ofp,"%d %d %d \n", op, l, m);
 	*/
+}
+
+int codeAddrMod (int loc, int m){
+    
+    //Modify the address at location loc
+    code[loc].m = m;
+    
+    if(DEBUG){
+        printf("mcode %d: %d %d %d\n", loc, code[loc].op, code[loc].l, code[loc].m);
+    }
 }
 
 // Returns the amount of variables in the current lexicographical level
@@ -299,7 +311,7 @@ int isRelationalOp(int token){
     lvl is the lexicographical level
     addr is the location in the mcode
 */
-void enter(int kind, char* name, int val, int lvl, int addr){
+void enter(int kind, char* name, int val, int level, int addr){
     
     //Try to find if the symbol is already declared
 	int i;
@@ -600,7 +612,7 @@ void statement(){
         int first_jump = codeIndex;
         
         //Dummy line
-        print(0, 0, 557);
+        print(0, 0, 0);
 
         getNextToken();
         
@@ -660,8 +672,8 @@ void statement(){
 
         
     }
-    else if(nextToken == whilesym)
-    {
+    else if(nextToken == whilesym){
+        
         if(DEBUG)
             printf("STATEMENT: whilesym\n");
 
@@ -727,13 +739,14 @@ void statement(){
         
     }
 }
+
+
 void block() {
 
     curLexLevel++;
     int space = 4;
-    //Record position of dummy instruction
-	int firstLine = codeIndex; 
-	print(7, 0, 0);  // Step 1
+    //Record position of dummy instruction, Step 1
+	int jmpaddr = print(7, 0, 0);
 	
 	if(DEBUG){
 	    printf("BLOCK\n");
@@ -754,7 +767,6 @@ void block() {
 
             getNextToken();
             
-
             if(nextToken != eqsym)
                 error(3);
 
@@ -766,8 +778,8 @@ void block() {
             getNextToken();
 
             // Add constant to the symbol table
-            insertToSymbolTable(1);
-
+            enter(1, nextIdentifier, nextNumber, curLexLevel, -1);
+            
             // last getNextToken() will store the comma in nextToken
         } while(nextToken == commasym);
 
@@ -775,9 +787,20 @@ void block() {
             error(5);
             
         getNextToken();
+        
+        if(DEBUG){
+            printf("end of Const\n");
+        }
     }
     if(nextToken == varsym) {
+        
+        if(DEBUG){
+            printf("Varsym\n");
+        }
+        
+        //Number of variables
         int numVars = 0;    
+        
         do {
             getNextToken();
 
@@ -790,29 +813,46 @@ void block() {
             getNextToken();
 
             // Add variable to the symbol table
-            insertToSymbolTable(2);
+            enter(2, nextIdentifier, 0, curLexLevel, 4+numVars-1);
 
             // last getNextToken() will store the comma in nextToken
+            if(DEBUG){
+                printf("numVars %d\n", numVars);
+            }
+            
         } while(nextToken == commasym);
 
+        space += numVars;
+        
         if (nextToken != semicolonsym)
             error(5);
             
-       	print(6, 0, numVars); // INC, 0, M for allocating variable space
+       	//print(6, 0, numVars); // INC, 0, M for allocating variable space
         getNextToken();
     }
     
     // Procedure?
     while(nextToken == procsym) {
+        
+        if(DEBUG){
+            printf("Procsym\n");
+        }
+        
+        //Next token should be an identifier
         getNextToken();
         
         if(nextToken != identsym)
             error(4);
-            
+        
+        
         getNextToken();
             
-        // Add procedure to the symbol table
-        insertToSymbolTable(3);
+        //INSER BOGUS ADDRESS. WILL BE MODIFIED LATER.
+        enter(3, nextIdentifier, 0, curLexLevel, 000);
+        
+        
+        // Add procedure to the symbol table | DEPRECATED
+        //insertToSymbolTable(3);
         
         //getNextToken(); // was causing errors (semicolon read by previous getNextToken()?)
             
@@ -820,25 +860,52 @@ void block() {
             error(5);
             
         getNextToken();
-            
+        
+        //Something needs to be returned from block()
+        //  That something will be the address of the procedure we stored
+        //  a few lines up.
         block();
         
         if(nextToken != semicolonsym)
             error(5);
             
         getNextToken();
+        
+        if(DEBUG){
+            printf("end of Procsym\n");
+        }
     }
     
+    if(DEBUG){
+        printf("Level: %d\n", curLexLevel);
+        printSymbolTable();    
+    }
+    
+    
+    //Supposed to be
+    /*
+    code[jmpaddr].addr = NEXT_CODE_ADDR
+    gen(INC, 0, space)
+    STATEMENT()
+    gen(RTN, 0, 0)
+    level--
+    */
+    codeAddrMod(jmpaddr, codeIndex);
+    print(6, 0, space);
+    statement();
+    print(2, 0, 0);
+    curLexLevel++;
+    
+    /*  DEPRECATED. SAME AS THE THING ABOVE
     int lastLine = codeIndex;
     codeIndex = firstLine;
     print(7, 0, lastLine+1);
     codeIndex = lastLine+1;
     print(6, 0, space); // Step 2
-
     statement();
-    
     print(2, 0, 0); // Step 4
     curLexLevel--;
+    */
 }
 
 void printMcode(){

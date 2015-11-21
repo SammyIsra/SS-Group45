@@ -14,6 +14,7 @@
 //Function prototypes
 void cleanCode(char* inputFile, char* outputFile);
 void error(int line, char *msg);
+void error_noline(char *msg);
 int tokenTranslate(char* temp);
 void lexemTable(char* inputFile, char* outputFile);
 char* appendC(char *temp, int tempsize, char c);
@@ -56,6 +57,11 @@ int main(){
 */
 void error(int line, char *msg){
     printf("Line %d - ERROR: %s\n", line, msg);
+    exit(EXIT_FAILURE);
+}
+
+void error_noline(char *msg){
+    printf("ERROR: %s\n", msg);
     exit(EXIT_FAILURE);
 }
 
@@ -438,7 +444,7 @@ void tokensList(char* inputFile, char* outputFile){
     char hold[TOKEN_MAX_LEN] = "";
 
     if(input == NULL)
-        error(lineCount, "Could not open the Lexem Table file");
+        error_noline("Could not open the Lexem Table file");
 
     //Remove the headers from the stream
     fscanf(input, "%s", trash); //Header 1
