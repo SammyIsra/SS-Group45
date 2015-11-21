@@ -896,6 +896,8 @@ void block() {
     print(2, 0, 0);
     curLexLevel--;
     
+    //At this point, we should delete old levels off the table
+    
     /*  DEPRECATED. SAME AS THE THING ABOVE
     int lastLine = codeIndex;
     codeIndex = firstLine;
@@ -921,9 +923,10 @@ void printMcode(){
 void main()
 {
     ifp = fopen("tokenlist.txt", "r");
-    ofp = fopen("mcode.txt","w");
-
     program();
+    
+    //Does OFP need to be a global variable?
+    ofp = fopen("mcode.txt","w");
     printMcode();
     fclose(ifp);
     fclose(ofp);
