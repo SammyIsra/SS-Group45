@@ -227,7 +227,7 @@ symbol identifierToSymbol (char iden[]) {
 
 	//Downcounting for-loop
 	for (i = symbolsAmount - 1; i >= 0; i--) {
-		if (strcmp(symbol_table[i].name, nextIdentifier) == 0) {
+		if (strcmp(symbol_table[i].name, iden) == 0) {
 			if (symbol_table[i].level <= curLexLevel)
 				return symbol_table[i];
 		}
@@ -522,6 +522,10 @@ void statement(){
 
         char temp[12];
         strcpy(temp, nextIdentifier);
+        
+        if(DEBUG){
+            printf("Identifier is: %s\n", temp);
+        }
 
         if(identifierToSymbol(nextIdentifier).kind != 2){
             error(12);
@@ -538,11 +542,6 @@ void statement(){
         expression();
 
         symbol currentSym = identifierToSymbol(temp);
-
-        // STO L M
-        if(DEBUG){
-            printf("STO curLexLevel: %d\n", curLexLevel);
-        }
 
         print(4, (curLexLevel - currentSym.level), currentSym.addr );
 
@@ -610,23 +609,25 @@ void statement(){
         if(DEBUG){
             printf("Then:\n");
         }
-        //Get location of dummy line (Where first jump will be)
-        // first_jump will jump to the line before the statement in else
-        int first_jump = codeIndex;
-
+        
         //Dummy line
-        print(0, 0, 0);
+        int firstJump = print(8, 0, 0);
 
         getNextToken();
 
-        //Inside the if
+        //Inside the if block
         statement();
+        
+        int elseJump = print(7, 0, 0);
 
         if(DEBUG){
             printf("End of Then\n");
         }
+        
+        //Modify the conditional jump to go here
+        codeAddrMod(firstJump, codeIndex);
 
-        //If we have an else
+        //If we have an else block
         if(nextToken == elsesym)
         {
 
@@ -636,52 +637,17 @@ void statement(){
 
         	getNextToken();
 
-        	//Get location of dummy line (Where second jump will be)
-            // second_jump will jump to the line at the end of execution
-            int second_jump = codeIndex;
-
-            //Dummy line
-            print(0, 0, 574);
-
-        	//Make fist_jump land in current codeIndex
-        	int curLine = codeIndex;
-
-        	codeIndex = first_jump;
-
-        	print(8, 0, curLine);
-
-        	codeIndex = curLine;
-        	//End of making first_jump...
-
-        	//Statement inside "else"
+        	//Statement inside "else" block
         	statement();
 
-            //Make second_jump land in current codeIndex
-            curLine = codeIndex;
-
-            codeIndex = second_jump;
-
-        	print(7, 0, curLine);
-
-        	codeIndex = curLine;
-        	//End of second_jump...
-
-        	printf("End of Else\n");
-
-        } else {
-
-            //record current line
-            int lastLine = codeIndex;
-
-            //Get to dummy line
-            codeIndex = first_jump;
-
-            //Overwrite dummy line
-            print(8, 0, lastLine);
-
-            //Get back to actual line
-            codeIndex = lastLine;
-        }
+        	if(DEBUG){
+        	    printf("End of Else\n");
+            }
+        } 
+        
+        // Modify the unconditional jump to go here 
+        codeAddrMod(elseJump, codeIndex);
+        
     }
     else if(nextToken == whilesym){
 
