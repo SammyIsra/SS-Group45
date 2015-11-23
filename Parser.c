@@ -902,7 +902,12 @@ void block() {
     codeAddrMod(jmpaddr, codeIndex);
     print(6, 0, space);
     statement();
-    print(2, 0, 0);
+    
+    //We do not need to return from the main block.
+    //  Therefore, only print the return statement if lex level > 1
+    if(curLexLevel >= 1)
+        print(2, 0, 0);
+        
     curLexLevel--;
     symbolsAmount = symbolsAmount - deleteOldLevels(curLexLevel);
 
