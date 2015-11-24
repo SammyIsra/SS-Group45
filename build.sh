@@ -1,4 +1,4 @@
-#Build and run the program
+#Build and run the PL/0 compiler
 
 echo 'Building scanner'
 gcc scanner.c -o scan.exe

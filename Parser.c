@@ -16,7 +16,7 @@
 
 #define MAX_SYMBOL_TABLE_SIZE 100
 #define MAX_CODE_LENGTH 500
-#define DEBUG 1
+#define DEBUG 0
 
 //Token table
 typedef enum {
