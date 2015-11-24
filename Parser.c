@@ -196,8 +196,10 @@ void error( int errorNo ){
 
 
 	printf("ERROR #%d: %s.\n", errorNo, msg);
-	printSymbolTable();
-
+	if(DEBUG){
+	    printSymbolTable();
+	}
+	
     exit(EXIT_FAILURE);
 }
 
