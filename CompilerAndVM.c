@@ -1760,8 +1760,32 @@ void getSwitches(int argc, char **argv, char switches[])
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
+    //command line switch handling
+    int numSwitches = argc-1;
+    char switches[argc-1]; //array to hold command-line switches
+    int index;
+
+    for(index = 1;index < argc; index++)
+    {
+        switches[index-1] = argv[index][1];
+    }
+
+    for(index = 0; index <= numSwitches; index++)
+    {
+
+    }
+
+            //t
+
+            //s
+
+            //m
+
+            //a
+
+            //v
     //Begin scanner
     //First thing to do is to clean the input
     cleanCode("input.txt", "cleaninput.txt");
