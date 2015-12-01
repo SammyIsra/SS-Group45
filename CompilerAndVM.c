@@ -1706,9 +1706,10 @@ void printStack(int screen){
 int getRow(int argc, char **argv, char c)
 {
     int position;
-    for( position = 1 ; position < argc ; position++ )
+    for(position = 1; position < argc; position++)
     {
-        if( argv[position][1] == c ) return position;
+        if(argv[position][1] == c)
+            return position;
     }
     return 0;
 }
@@ -1769,24 +1770,38 @@ int main(int argc, char **argv)
 
     for(index = 1;index < argc; index++)
     {
-        switches[index-1] = argv[index][1];
+        switches[index-1] = argv[index][1]; //fill char array with command-line parameters
     }
 
     for(index = 0; index <= numSwitches; index++)
     {
+        if(strcmp(switches[index], "t"))
+        {
+            //print token list to screen and file
+        }
+
+        if(strcmp(switches[index], "s"))
+        {
+            //print symbol table to screen and file
+        }
+
+        if(strcmp[index], "m")
+        {
+            //print mcode to screen and file
+        }
+
+        if(strcmp[index], "a")
+        {
+            //print assembly code to screen and file
+        }
+
+        if(strcmp[index], "v")
+        {
+            //print virtual machine execution stack trace  to screen and file
+        }
 
     }
 
-            //t
-
-            //s
-
-            //m
-
-            //a
-
-            //v
-    //Begin scanner
     //First thing to do is to clean the input
     cleanCode("input.txt", "cleaninput.txt");
 
