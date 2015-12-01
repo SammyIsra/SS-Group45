@@ -704,12 +704,14 @@ symbol identifierToSymbol (char iden[]) {
 void printSymbolTable(){
 
     int i;
+    FILE *opf = fopen("symboltable.txt", "w");
 
-    printf("**Symbol table**\n");
-    printf("kind\tname\tvalue\tlevel\taddress\n");
+    fprintf(opf,"**Symbol table**\n");
+    fprintf(opf,"kind\tname\tvalue\tlevel\taddress\n");
     for(i = 0; i < symbolsAmount; i++){
-        printf("%d\t%s\t%d\t%d\t%d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val, symbol_table[i].level, symbol_table[i].addr);
+        fprintf(opf,"%d\t%s\t%d\t%d\t%d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val, symbol_table[i].level, symbol_table[i].addr);
     }
+    fclose(opf);
 }
 
 int print (int op, int l, int m) {
@@ -1761,6 +1763,18 @@ void getSwitches(int argc, char **argv, char switches[])
     }
 }
 
+void printfile(char *filename)
+{
+    FILE *f = fopen(filename, "r");
+    char current = (char)fgetc(f);
+    while(current != EOF)
+    {
+        printf("%c", current);
+        current = (char)fgetc(f);
+    }
+    fclose(f);
+}
+
 int main(int argc, char **argv)
 {
     //command line switch handling
@@ -1768,110 +1782,174 @@ int main(int argc, char **argv)
     char switches[argc-1]; //array to hold command-line switches
     int index;
 
-    for(index = 1;index < argc; index++)
-    {
-        switches[index-1] = argv[index][1]; //fill char array with command-line parameters
-    }
+    getSwitches(argc, argv, switches);
 
     for(index = 0; index <= numSwitches; index++)
     {
-        if(strcmp(switches[index], "t"))
+        if(strcmp(switches[index], "t")==0)
         {
             //print token list to screen and file
+            //run scanner
+            //print tokenlist file
+
+            cleanCode("input.txt", "cleaninput.txt");
+            lexemTable("cleaninput.txt", "lexemetable.txt");
+            tokensList("lexemetable.txt", "tokenlist.txt");
+            //print tokenlist file
+            printfile("tokenlist.txt");
         }
 
-        if(strcmp(switches[index], "s"))
+        if(strcmp(switches[index], "s")==0)
         {
             //print symbol table to screen and file
+            cleanCode("input.txt", "cleaninput.txt");
+            lexemTable("cleaninput.txt", "lexemetable.txt");
+            tokensList("lexemetable.txt", "tokenlist.txt");
+            ifp = fopen("tokenlist.txt", "r");
+            program();
+
+            ofp = fopen("mcode.txt","w");
+            printMcode();
+            fclose(ifp);
+            fclose(ofp);
+            printfile("symboltable.txt");
         }
 
-        if(strcmp[index], "m")
+        if(strcmp(switches[index], "m")==0)
         {
             //print mcode to screen and file
+            cleanCode("input.txt", "cleaninput.txt");
+            lexemTable("cleaninput.txt", "lexemetable.txt");
+            tokensList("lexemetable.txt", "tokenlist.txt");
+            ifp = fopen("tokenlist.txt", "r");
+            program();
+
+            ofp = fopen("mcode.txt","w");
+            printMcode();
+            fclose(ifp);
+            fclose(ofp);
+
+            printfile("mcode.txt");
         }
 
-        if(strcmp[index], "a")
+        if(strcmp(switches[index], "a")==0)
         {
             //print assembly code to screen and file
+            cleanCode("input.txt", "cleaninput.txt");
+            lexemTable("cleaninput.txt", "lexemetable.txt");
+            tokensList("lexemetable.txt", "tokenlist.txt");
+            ifp = fopen("tokenlist.txt", "r");
+            program();
+
+            ofp = fopen("mcode.txt","w");
+            printMcode();
+            fclose(ifp);
+            fclose(ofp);
+
+            //Begin VM
+            // Print to screen (used for debugging)
+            int screen = 0;
+
+            ifp = fopen("mcode.txt", "r");	    // Open the input file
+            acode = fopen("acode.txt", "w");    //Open output file for disassembled code
+            int line = 0;						// Used for storing the instructions in code[]
+
+            // Error opening the file
+            if(ifp == NULL) {
+                printf("'mcode.txt' could not be opened!\n");
+                return 0;
+            }
+
+            // While theres data in input file, store it in code[] and increment the line number
+            // fscanf return -1 when we reach EOF
+            // We read in line by line because we know that the format is consistent
+            while(fscanf(ifp, "%d %d %d", &ir.op, &ir.l, &ir.m) != -1){
+                code[line] = ir;	// save the instruction into the code storage
+                line++;				// increment the index for the code storage
+            }
+
+            // Print all the lines from the program code
+            printProgram(acode, line, 0);
+
+            printfile("acode.txt");
         }
 
-        if(strcmp[index], "v")
+        if(strcmp(switches[index], "v")==0)
         {
             //print virtual machine execution stack trace  to screen and file
+            cleanCode("input.txt", "cleaninput.txt");
+            lexemTable("cleaninput.txt", "lexemetable.txt");
+            tokensList("lexemetable.txt", "tokenlist.txt");
+
+            //Begin parser
+            ifp = fopen("tokenlist.txt", "r");
+            program();
+
+            ofp = fopen("mcode.txt","w");
+            printMcode();
+            fclose(ifp);
+            fclose(ofp);
+
+            //Begin VM
+            // Print to screen (used for debugging)
+            int screen = 0;
+
+            ifp = fopen("mcode.txt", "r");	    // Open the input file
+            acode = fopen("acode.txt", "w");    //Open output file for disassembled code
+            int line = 0;						// Used for storing the instructions in code[]
+
+            // Error opening the file
+            if(ifp == NULL) {
+                printf("'mcode.txt' could not be opened!\n");
+                return 0;
+            }
+
+            // While theres data in input file, store it in code[] and increment the line number
+            // fscanf return -1 when we reach EOF
+            // We read in line by line because we know that the format is consistent
+            while(fscanf(ifp, "%d %d %d", &ir.op, &ir.l, &ir.m) != -1){
+                code[line] = ir;	// save the instruction into the code storage
+                line++;				// increment the index for the code storage
+            }
+
+            // Print all the lines from the program code
+            printProgram(acode, line, 0);
+
+            // Print the heading for the stack trace along with the initial register values
+            fprintf(ofp, "\t\t\t\tpc\tbp\tsp\tstack\n");
+            fprintf(ofp, "Initial values\t\t\t");
+            printRegisters(0);
+            fprintf(ofp, "\n");
+
+            // Same thing as above, but print to screen
+            if(screen){
+                printProgram(acode,line, 1);
+                printf("\t\t\t\tpc\tbp\tsp\tstack\n");
+                printf("Initial values\t\t\t");
+                printRegisters(1);
+                printf("\n");
+            }
+
+            // If the base pointer is not 0
+            // AND no halt signal has been detected,
+            // THEN continue execution of the program
+            while(bp != 0 && halt != 0) {
+                ir = fetch();								// Fetch instruction into instruction register
+                printInstruction(ofp,pc-1, ir, "\t", screen);	// Print it
+                execute();									// Execute the instruction
+                printRegisters(screen);						// Print the registers
+                printStack(screen);			// Print the stack trace
+            }
+
+            printfile("stacktrace.txt");
+
+            if(screen)
+                printf("\n");
+
+
         }
 
     }
-
-    //First thing to do is to clean the input
-    cleanCode("input.txt", "cleaninput.txt");
-
-    //Second step is to make the lexem table from the clean input
-    lexemTable("cleaninput.txt", "lexemetable.txt");
-
-    tokensList("lexemetable.txt", "tokenlist.txt");
-
-    //Begin parser
-    ifp = fopen("tokenlist.txt", "r");
-    program();
-
-    ofp = fopen("mcode.txt","w");
-    printMcode();
-    fclose(ifp);
-    fclose(ofp);
-
-    //Begin VM
-    // Print to screen (used for debugging)
-	int screen = 0;
-
-	ifp = fopen("mcode.txt", "r");	// Open the input file
-	ofp = fopen("stacktrace.txt", "w");		// Open the output file for stack trace (ofp is a global variable)
-	acode = fopen("acode.txt", "w");  //Open output file for disassembled code
-	int line = 0;							// Used for storing the instructions in code[]
-
-	// Error opening the file
-	if(ifp == NULL) {
-		printf("'mcode.txt' could not be opened!\n");
-		return 0;
-	}
-
-	// While theres data in input file, store it in code[] and increment the line number
-	// fscanf return -1 when we reach EOF
-	// We read in line by line because we know that the format is consistent
-	while(fscanf(ifp, "%d %d %d", &ir.op, &ir.l, &ir.m) != -1){
-		code[line] = ir;	// save the instruction into the code storage
-		line++;				// increment the index for the code storage
-	}
-
-	// Print all the lines from the program code
-	printProgram(acode, line, 0);
-	// Print the heading for the stack trace along with the initial register values
-	fprintf(ofp, "\t\t\t\tpc\tbp\tsp\tstack\n");
-	fprintf(ofp, "Initial values\t\t\t");
-	printRegisters(0);
-	fprintf(ofp, "\n");
-
-	// Same thing as above, but print to screen
-	if(screen){
-		printProgram(acode,line, 1);
-		printf("\t\t\t\tpc\tbp\tsp\tstack\n");
-		printf("Initial values\t\t\t");
-		printRegisters(1);
-		printf("\n");
-	}
-
-	// If the base pointer is not 0
-	// AND no halt signal has been detected,
-	// THEN continue execution of the program
-	while(bp != 0 && halt != 0) {
-		ir = fetch();								// Fetch instruction into instruction register
-		printInstruction(ofp,pc-1, ir, "\t", screen);	// Print it
-		execute();									// Execute the instruction
-		printRegisters(screen);						// Print the registers
-		printStack(screen);			// Print the stack trace
-	}
-
-    if(screen)
-        printf("\n");
 
     return 0;
 }
