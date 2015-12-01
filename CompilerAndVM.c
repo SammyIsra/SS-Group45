@@ -40,6 +40,11 @@ typedef struct symbol{
 	int addr;		//M address
 } symbol;
 
+//Switch functions
+void getSwitches(int argc, char **argv, char switches[]);
+char getNextArg(int argc, char **argv);
+void getSwitches(int argc, char **argv, char switches[]);
+
 //Scanner functions
 void cleanCode(char* inputFile, char* outputFile);
 void error(int line, char *msg);
@@ -1696,6 +1701,63 @@ void printStack(int screen){
 
 	if(screen)
 		printf("\n");
+}
+
+int getRow(int argc, char **argv, char c)
+{
+    int position;
+    for( position = 1 ; position < argc ; position++ )
+    {
+        if( argv[position][1] == c ) return position;
+    }
+    return 0;
+}
+
+char getNextArg(int argc, char **argv)
+{
+    int row = getRow(argc, argv, 't');
+    if( row > 0 )
+    {
+        argv[row][1] = 999;
+        return 't';
+    }
+    row = getRow(argc, argv, 's');
+    if( row > 0 )
+    {
+        argv[row][1] = 999;
+        return 's';
+    }
+
+    row = getRow(argc, argv, 'm');
+    if( row > 0 )
+    {
+        argv[row][1] = 999;
+        return 'm';
+    }
+
+    row = getRow(argc, argv, 'a');
+    if( row > 0 )
+    {
+        argv[row][1] = 999;
+        return 'a';
+    }
+
+    row = getRow(argc, argv, 'v');
+    if( row > 0 )
+    {
+        argv[row][1] = 999;
+        return 'v';
+    }
+
+}
+
+void getSwitches(int argc, char **argv, char switches[])
+{
+    int i;
+    for( i = 0 ; i < argc-1 ; i++ )
+    {
+        switches[i] = getNextArg(argc, argv);
+    }
 }
 
 int main(int argc, char *argv[])
