@@ -1785,74 +1785,72 @@ int main(int argc, char **argv)
     getSwitches(argc, argv, switches);
 
     //print virtual machine execution stack trace  to screen and file
-            cleanCode("input.txt", "cleaninput.txt");
-            lexemTable("cleaninput.txt", "lexemetable.txt");
-            tokensList("lexemetable.txt", "tokenlist.txt");
+    cleanCode("input.txt", "cleaninput.txt");
+    lexemTable("cleaninput.txt", "lexemetable.txt");
+    tokensList("lexemetable.txt", "tokenlist.txt");
 
-            //Begin parser
-            ifp = fopen("tokenlist.txt", "r");
-            program();
+    //Begin parser
+    ifp = fopen("tokenlist.txt", "r");
+    program();
 
-            ofp = fopen("mcode.txt","w");
-            printMcode();
-            fclose(ifp);
-            fclose(ofp);
+    ofp = fopen("mcode.txt","w");
+    printMcode();
+    fclose(ifp);
+    fclose(ofp);
 
-            //Begin VM
-            // Print to screen (used for debugging)
-            int screen = 0;
+    //Begin VM
+    // Print to screen (used for debugging)
+    int screen = 0;
 
-            ifp = fopen("mcode.txt", "r");	    // Open the input file
-            acode = fopen("acode.txt", "w");    //Open output file for disassembled code
-            int line = 0;						// Used for storing the instructions in code[]
+    ifp = fopen("mcode.txt", "r");	    // Open the input file
+    acode = fopen("acode.txt", "w");    //Open output file for disassembled code
+    int line = 0;						// Used for storing the instructions in code[]
 
-            // Error opening the file
-            if(ifp == NULL) {
-                printf("'mcode.txt' could not be opened!\n");
-                return 0;
-            }
+    // Error opening the file
+    if(ifp == NULL) {
+        printf("'mcode.txt' could not be opened!\n");
+        return 0;
+    }
 
-            // While theres data in input file, store it in code[] and increment the line number
-            // fscanf return -1 when we reach EOF
-            // We read in line by line because we know that the format is consistent
-            while(fscanf(ifp, "%d %d %d", &ir.op, &ir.l, &ir.m) != -1){
-                code[line] = ir;	// save the instruction into the code storage
-                line++;				// increment the index for the code storage
-            }
+    // While theres data in input file, store it in code[] and increment the line number
+    // fscanf return -1 when we reach EOF
+    // We read in line by line because we know that the format is consistent
+    while(fscanf(ifp, "%d %d %d", &ir.op, &ir.l, &ir.m) != -1){
+        code[line] = ir;	// save the instruction into the code storage
+        line++;				// increment the index for the code storage
+    }
 
-            // Print all the lines from the program code
-            printProgram(acode, line, 0);
+    // Print all the lines from the program code
+    printProgram(acode, line, 0);
 
-            // Print the heading for the stack trace along with the initial register values
-            fprintf(ofp, "\t\t\t\tpc\tbp\tsp\tstack\n");
-            fprintf(ofp, "Initial values\t\t\t");
-            printRegisters(0);
-            fprintf(ofp, "\n");
+    // Print the heading for the stack trace along with the initial register values
+    fprintf(ofp, "\t\t\t\tpc\tbp\tsp\tstack\n");
+    fprintf(ofp, "Initial values\t\t\t");
+    printRegisters(0);
+    fprintf(ofp, "\n");
 
-            // Same thing as above, but print to screen
-            if(screen){
-                printProgram(acode,line, 1);
-                printf("\t\t\t\tpc\tbp\tsp\tstack\n");
-                printf("Initial values\t\t\t");
-                printRegisters(1);
-                printf("\n");
-            }
+    // Same thing as above, but print to screen
+    if(screen){
+        printProgram(acode,line, 1);
+        printf("\t\t\t\tpc\tbp\tsp\tstack\n");
+        printf("Initial values\t\t\t");
+        printRegisters(1);
+        printf("\n");
+    }
 
-            // If the base pointer is not 0
-            // AND no halt signal has been detected,
-            // THEN continue execution of the program
-            while(bp != 0 && halt != 0) {
-                ir = fetch();								// Fetch instruction into instruction register
-                printInstruction(ofp,pc-1, ir, "\t", screen);	// Print it
-                execute();									// Execute the instruction
-                printRegisters(screen);						// Print the registers
-                printStack(screen);			// Print the stack trace
-            }
+    // If the base pointer is not 0
+    // AND no halt signal has been detected,
+    // THEN continue execution of the program
+    while(bp != 0 && halt != 0) {
+        ir = fetch();								// Fetch instruction into instruction register
+        printInstruction(ofp,pc-1, ir, "\t", screen);	// Print it
+        execute();									// Execute the instruction
+        printRegisters(screen);						// Print the registers
+        printStack(screen);			// Print the stack trace
+    }
 
-            printfile("stacktrace.txt");
-
-            if(screen)
-                printf("\n");
+    if(screen)
+        printf("\n");
 
     for(index = 0; index <= numSwitches; index++)
     {
